@@ -14,6 +14,7 @@ class byj {
 
     void init(int *ps);
     void onestep(int dir);
+    void mstep(int val);
   protected:
    
   public:
@@ -28,6 +29,22 @@ class byj {
     void test();
 };
 
+class step4_job : byj {
+private:
+  int delay; // speed
+  uint16_t delay_cnt; // scan period * delay_cnt, ... delay_cnt = delay; delay_cnt--
+  int dir;
+
+public:
+  int speed;
+  uint16_t distance; // distance--
+
+public:
+  step4_job(int *ps);
+  ~step4_job();
+
+};
+
 struct byj_job {
   byj *motor;
   int dir;
@@ -38,7 +55,7 @@ struct byj_job {
   int isalive() { return (motor)? 1 : 0; };
   void close() { motor = (byj*)0; }
   void set(struct byj_job *ss);
-  void scan();
+  void onestep();
 };
 
 #define MAX_JOB 16
@@ -53,15 +70,16 @@ void scan_tab(); // timer interrupt
 
 class scanjobs {
 private:
+  static int _initialized;
   static struct byj_job _cmds[MAX_JOB];
-  static struct byj_job* get_tab();
+  void init_tab();
 public:
   scanjobs();
   ~scanjobs();
 
-  static int set_tab(struct byj_job*);
-  static void init_tab();
-  static void scan_tab();
+  int set_tab(struct byj_job*);
+  static void scan();
 };
+
 
 

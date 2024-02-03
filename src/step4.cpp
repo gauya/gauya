@@ -20,13 +20,40 @@ void byj::init(int *ps) {
 
 #define TEST 0
 
+#ifndef LH  
+#define LH(cdata) (((cdata)? HIGH: LOW))
+#endif
+
+void byj::mstep(int pd) {
+  for( int k=0,val=0x8; k<4; k++, val >>= 1) {
+    digitalWrite((uint8_t)this->_ports[k], LH(pd & val));
+  }
+}
+
 void byj::onestep(int dir) {
   const uint16_t EV[] = { 0x1,0x3,0x2,0x6,0x4,0xc,0x8,0x9,0x0 };
   const int cycle = 8;
 
-#ifndef LH  
-#define LH(cdata) (((cdata)? HIGH: LOW))
-#endif
+  if( dir == 0 ) { // stop
+    mstep(EV[8]);
+  } else
+  if( dir > 0 ) {
+    for( int x=0; x<cycle; x++) {
+      mstep(EV[x]);
+      delay(min_delay); // DE
+    
+    }
+  } else {
+    for( int x=cycle-1; x>=0; x--) {
+      mstep(EV[x]);
+      delay(min_delay); // DE
+    }
+  }
+}
+#if 0
+void byj::onestep(int dir) {
+  const uint16_t EV[] = { 0x1,0x3,0x2,0x6,0x4,0xc,0x8,0x9,0x0 };
+  const int cycle = 8;
 
   if( dir == 0 ) { // stop
     for( int k=0,val=0x8; k<4; k++,val >>= 1) {
@@ -49,8 +76,8 @@ void byj::onestep(int dir) {
       delay(min_delay); // DE
     }
   }
-//#undef LH  
 }
+#endif
 
 void byj::go(double speed, uint16_t distance) { 
   int dir = 1;
@@ -99,6 +126,17 @@ void byj::test() {
   #endif
 }
 
+step4_job::step4_job(int *ps) : byj(ps) {
+  speed = 0;
+  distance = 0;
+
+  dir = 0;
+  delay = delay_cnt = 0;
+}
+
+step4_job::~step4_job() {
+}
+
 void byj_job::set( struct byj_job *sp) {
   motor = sp->motor;
   dir = sp->dir;
@@ -106,14 +144,14 @@ void byj_job::set( struct byj_job *sp) {
   distance = sp->distance;
 }
 
-void byj_job::scan() {
+void byj_job::onestep() {
   if( ! isalive() ) return;
 
-  if(--delay_cnt <= 0) {
+  if(--delay_cnt > 0) {
     // some one step process
-    // ...
+    motor->onestep(dir);
 
-    if(--distance <= 0) {
+    if(--distance <= 0) { // ending
       motor = 0; // remove job;
       //delay = delay_cnt = 0; distance = 0;
     }
@@ -122,25 +160,26 @@ void byj_job::scan() {
 
 
 scanjobs::scanjobs() {
-
+  init_tab();
 }
 
 scanjobs::~scanjobs() {
 }
 
+int scanjobs::_initialized = 0;
+
 void scanjobs::init_tab() {
-  struct byj_job *mt = get_tab();
-  for( int i=0; i < MAX_JOB; i++ ) {
-    mt[i].close();
+  if( _initialized == 0) {
+    memset(_cmds, 0, sizeof(struct byj_job)*MAX_JOB);
+    _initialized = 1;
   }
-  return;
 }
 
-void scanjobs::scan_tab() {
-  struct byj_job *sc = get_tab(); //_cmds;
+void scanjobs::scan() {
+  struct byj_job *sc = _cmds;
   for( int i=0; i < MAX_JOB; i++,sc++ ) {
     if( sc->isalive() ) {
-      sc->scan();
+      sc->onestep();
     }
   }
   return;
@@ -149,7 +188,7 @@ void scanjobs::scan_tab() {
 int scanjobs::set_tab( struct byj_job * ss) {
   if( !ss ) 
     return -1;
-  struct byj_job* lst = get_tab();
+  struct byj_job* lst = _cmds;
   for( int i=0; i < MAX_JOB; i++ ) {
     if( ! lst[i].isalive() ) {
       lst[i].set(ss);
@@ -159,6 +198,3 @@ int scanjobs::set_tab( struct byj_job * ss) {
   return -1;
 }
 
-void jobinit() {
-  scanjobs::init_tab();
-}

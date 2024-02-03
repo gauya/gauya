@@ -68,11 +68,28 @@ void loop() {
 
 #else
 
+#include <TimerOne.h>
+
+void timer_func() {
+    //
+    static int on = 1;
+    static unsigned long cnt = 0;
+    if( cnt++ > 1000 ) {
+      digitalWrite(LED_BUILTIN,on);
+      on = !on;
+      cnt = 0;
+    }
+};
+
+
 int motor1_pins[] = { 11,10,9,8,0 };
 byj *B;
 
 void setup() {
   Serial.begin(115200);
+  pinMode(LED_BUILTIN,OUTPUT); // led
+  Timer1.initialize(1000); // 1ms
+  Timer1.attachInterrupt(timer_func);
 
   B = (byj*)new byj((int *)motor1_pins);
 }
