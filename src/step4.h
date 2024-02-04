@@ -5,6 +5,17 @@
 #ifndef __STEP4_H__
 #define __STEP4_H__
 
+class A {
+  int _i;
+  public:
+  void abc(int i);
+};
+
+class B : public A {
+  public:
+  void abc(int i);
+};
+
 #define LH(cdata) (((cdata)? HIGH: LOW))
 
 class byj {
@@ -21,18 +32,17 @@ class byj {
    
   public:
     byj(int *ps);
-    byj();
     ~byj() {};
 
     void init();
-    void go(double speed, uint16_t distance); // angle
+    virtual void go(double speed, uint16_t distance); // angle
     void stop() { onestep(0); };
     operator int *() { return (int*)_ports; }
   /////////////////////////////////////////////////////////////  
     void test();
 };
 
-class step4_job : byj {
+class step4_job : public byj {
 private:
   int _delay; // check per 100 usec
   uint16_t _delay_cnt; // scan period * delay_cnt, ... delay_cnt = delay; delay_cnt--
@@ -54,15 +64,7 @@ public:
 #define MAX_STEP4_MOTOR 4
 
 void scan_step4();
+int append_step4(class step4_job *sj) ;
 
 #endif // __STEP4_H__
 
-void step4_job::go(double speed, uint16_t distance) {
-  noInterrupts();
-
-  _dir = (_speed < 0)? -1: (abs(speed) < min_speed)? 0 : 1;
-  _speed = abs(speed);
-  _distance = distance;
-  
-  interrupts();
-}

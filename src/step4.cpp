@@ -1,7 +1,16 @@
 
 #include "step4.h"
 
+const uint16_t EV[] = { 0x1,0x3,0x2,0x6,0x4,0xc,0x8,0x9,0x0 };
+
 byj::byj( int *v ) {
+  if( !v ) {
+    //throw "need motor 4 port";
+    for(int i=0;i<4;i++) {
+      this->_ports[i] = -1;
+    }    
+    return;
+  }
   for(int i=0;i<4;i++) {
     this->_ports[i] = v[i];
   }
@@ -31,7 +40,6 @@ void byj::mstep(int pd) {
 }
 
 void byj::onestep(int dir) {
-  const uint16_t EV[] = { 0x1,0x3,0x2,0x6,0x4,0xc,0x8,0x9,0x0 };
   const int cycle = 8;
 
   if( dir == 0 ) { // stop
@@ -50,6 +58,7 @@ void byj::onestep(int dir) {
     }
   }
 }
+
 #if 0
 void byj::onestep(int dir) {
   const uint16_t EV[] = { 0x1,0x3,0x2,0x6,0x4,0xc,0x8,0x9,0x0 };
@@ -122,79 +131,85 @@ void byj::test() {
   #else
   go(0.95,512);
   delay(1000);
-  go(-0.007,512);
+  go(-0.007,51);
   #endif
 }
 
 step4_job::step4_job(int *ps) : byj(ps) {
-  speed = 0;
-  distance = 0;
+  _speed = 0;
+  _distance = 0;
 
-  dir = 0;
-  delay = delay_cnt = 0;
+  _dir = 0;
+  _delay = _delay_cnt = 0;
 }
 
 step4_job::~step4_job() {
+  _dir = 0;
 }
 
-void byj_job::set( struct byj_job *sp) {
-  motor = sp->motor;
-  dir = sp->dir;
-  delay = delay_cnt = sp->delay;
-  distance = sp->distance;
-}
 
-void byj_job::onestep() {
-  if( ! isalive() ) return;
+void step4_job::seq_step() { // called timer interrupt
+  noInterrupts(); // inhebit external interrupt
 
-  if(--delay_cnt > 0) {
-    // some one step process
-    motor->onestep(dir);
+  if( _dir == 0 ) goto seq_stop_return;
 
-    if(--distance <= 0) { // ending
-      motor = 0; // remove job;
-      //delay = delay_cnt = 0; distance = 0;
+  if( _step_no != -1 ) {
+    if( _step_no < 0 || _step_no > 7 ) {
+      goto seq_stop_return; // error
     }
-  }
-}
+    mstep(_step_no++);
+    if( _step_no > 7 ) {
+      // ending mstep
+      _step_no = -1;
 
-
-scanjobs::scanjobs() {
-  init_tab();
-}
-
-scanjobs::~scanjobs() {
-}
-
-int scanjobs::_initialized = 0;
-
-void scanjobs::init_tab() {
-  if( _initialized == 0) {
-    memset(_cmds, 0, sizeof(struct byj_job)*MAX_JOB);
-    _initialized = 1;
-  }
-}
-
-void scanjobs::scan() {
-  struct byj_job *sc = _cmds;
-  for( int i=0; i < MAX_JOB; i++,sc++ ) {
-    if( sc->isalive() ) {
-      sc->onestep();
     }
+    goto seq_stop_return;
   }
-  return;
+
+  if( --_delay_cnt > 0 ) {
+    goto seq_stop_return;
+  } 
+
+  if( --_delay > 0 ) {
+    goto seq_stop_return;
+  }
+
+  if( --_distance > 0 ) {
+    // calc, establish plan
+    // delay, delay_cnt
+  }
+
+seq_stop_return:
+  interrupts(); // allow interrupt
 }
 
-int scanjobs::set_tab( struct byj_job * ss) {
-  if( !ss ) 
-    return -1;
-  struct byj_job* lst = _cmds;
-  for( int i=0; i < MAX_JOB; i++ ) {
-    if( ! lst[i].isalive() ) {
-      lst[i].set(ss);
+void step4_job::go(double speed, uint16_t distance) {
+  noInterrupts();
+
+  _dir = (_speed < 0)? -1: (abs(speed) < min_speed)? 0 : 1;
+  _speed = abs(speed);
+  _distance = distance;
+
+  interrupts();
+}
+
+step4_job *__step4s[MAX_STEP4_MOTOR] = { 0,0,0,0, };
+
+void scan_step4() {
+  for(int i=0;i < MAX_STEP4_MOTOR; i++) {
+    if( __step4s[i] == (step4_job *)0 ) {
+      return;
+    }
+    __step4s[i]->seq_step();
+  }
+}
+
+int append_step4(class step4_job *sj) {
+  for(int i=0;i < MAX_STEP4_MOTOR; i++) {
+    if( __step4s[i] == (step4_job *)0 ) {
+      __step4s[i] = sj;
       return i;
     }
   }
   return -1;
 }
-
