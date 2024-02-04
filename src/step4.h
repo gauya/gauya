@@ -5,17 +5,6 @@
 #ifndef __STEP4_H__
 #define __STEP4_H__
 
-class A {
-  int _i;
-  public:
-  void abc(int i);
-};
-
-class B : public A {
-  public:
-  void abc(int i);
-};
-
 #define LH(cdata) (((cdata)? HIGH: LOW))
 
 class byj {
@@ -44,8 +33,8 @@ class byj {
 
 class step4_job : public byj {
 private:
-  int _delay; // check per 100 usec
-  uint16_t _delay_cnt; // scan period * delay_cnt, ... delay_cnt = delay; delay_cnt--
+  uint16_t _delay; // from speed
+  uint16_t _delay_cnt; // check per 100 usec, scan period * delay_cnt, ... delay_cnt = delay; delay_cnt--
   int _step_no; // 0~7 , -1 : default
 
 public:
@@ -57,8 +46,8 @@ public:
   step4_job(int *ps);
   ~step4_job();
 
-  void go(double speed, uint16_t distance);
   void seq_step();
+  void go(double speed, uint16_t distance); // timer interrupt will handle
 };
 
 #define MAX_STEP4_MOTOR 4

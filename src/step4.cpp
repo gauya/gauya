@@ -151,8 +151,10 @@ step4_job::~step4_job() {
 void step4_job::seq_step() { // called timer interrupt
   noInterrupts(); // inhebit external interrupt
 
+  // stoped or nothing to do
   if( _dir == 0 ) goto seq_stop_return;
 
+  // in process
   if( _step_no != -1 ) {
     if( _step_no < 0 || _step_no > 7 ) {
       goto seq_stop_return; // error
@@ -168,16 +170,17 @@ void step4_job::seq_step() { // called timer interrupt
 
   if( --_delay_cnt > 0 ) {
     goto seq_stop_return;
-  } 
-
-  if( --_delay > 0 ) {
-    goto seq_stop_return;
+  } else {
+    // restart step
+    _step_no = 0;
+    _delay_cnt = _delay;
   }
 
   if( --_distance > 0 ) {
     // calc, establish plan
     // delay, delay_cnt
   }
+
 
 seq_stop_return:
   interrupts(); // allow interrupt
