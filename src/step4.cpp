@@ -159,7 +159,7 @@ void step4_job::seq_step() { // called timer interrupt
     if( _step_no < 0 || _step_no > 7 ) {
       goto seq_stop_return; // error
     }
-    mstep(_step_no++);
+    mstep(EV[_step_no++]);
     if( _step_no > 7 ) {
       // ending mstep
       _step_no = -1;
@@ -172,15 +172,13 @@ void step4_job::seq_step() { // called timer interrupt
     goto seq_stop_return;
   } else {
     // restart step
-    _step_no = 0;
-    _delay_cnt = _delay;
+    if( --_distance > 0 ) {
+      // calc, establish plan
+      // delay, delay_cnt
+      _step_no = 0;
+      _delay_cnt = _delay;
+    }
   }
-
-  if( --_distance > 0 ) {
-    // calc, establish plan
-    // delay, delay_cnt
-  }
-
 
 seq_stop_return:
   interrupts(); // allow interrupt
@@ -189,11 +187,20 @@ seq_stop_return:
 void step4_job::go(double speed, uint16_t distance) {
   noInterrupts();
 
-  _dir = (_speed < 0)? -1: (abs(speed) < min_speed)? 0 : 1;
+  _dir = (_speed < 0)? -1: (speed < min_speed)? 0 : 1;
   _speed = abs(speed);
   _distance = distance;
+  _delay = 1 / (_speed + min_delay);
+  if(_delay < min_delay) _delay = min_delay;
+  //_delay = 100;
+  _delay_cnt = _delay;
+  _step_no = 0;
 
   interrupts();
+}
+
+void step4_job::info() const {
+  Serial.println("step4info:");
 }
 
 step4_job *__step4s[MAX_STEP4_MOTOR] = { 0,0,0,0, };
