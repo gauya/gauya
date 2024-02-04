@@ -81,21 +81,42 @@ void timer_func() {
     }
 };
 
+void ex_isr() {
+  // stop or dir reverse
+  // interrupts(), nointerrupts()
+
+  Serial.print(":");
+}
 
 int motor1_pins[] = { 11,10,9,8,0 };
 byj *B;
+int interruptPin = 2;
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("Hello");
+
   pinMode(LED_BUILTIN,OUTPUT); // led
+  
   Timer1.initialize(1000); // 1ms
   Timer1.attachInterrupt(timer_func);
 
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), ex_isr, CHANGE);  // RISING,FALLING, HIGH, LOW
+
   B = (byj*)new byj((int *)motor1_pins);
+
+  char buf[80];
+  sprintf(buf,"szLint = %d, byj=%d, step4_job=%d",sizeof(int),sizeof(class byj),sizeof(step4_job));
+  Serial.println(buf);
+
 }
 
 void loop() {
+  static int cnt=0;
   B->test();
+
+  Serial.println(cnt++);
 }
 
 #endif
