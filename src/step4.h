@@ -21,12 +21,12 @@ class byj {
    
   public:
     byj(int *ps);
-    ~byj() {};
+    virtual ~byj() {};
 
     void init();
     virtual void go(int speed, uint16_t distance); // angle
-    void stop() { onestep(0); };
-    virtual bool isstop() {};
+    virtual void stop() { onestep(0); };
+    virtual bool isstop() { return false; };
     operator int *() { return (int*)_ports; }
   /////////////////////////////////////////////////////////////  
     void test();
@@ -34,6 +34,7 @@ class byj {
 
 class step4_job : public byj {
 private:
+  int _id;
   uint16_t _delay; // from speed
   uint16_t _delay_cnt; // check per 100 usec, scan period * delay_cnt, ... delay_cnt = delay; delay_cnt--
   uint16_t _mdelay; // == min_delay;
@@ -46,18 +47,21 @@ public:
 
 public:
   step4_job(int *ps);
-  ~step4_job();
+  virtual ~step4_job();
 
   void info() const;
+  void stop();
   bool isstop() { return (_dir == 0 ); }
   void seq_step();
   void go(int speed, uint16_t distance); // timer interrupt will handle
+
+  friend int append_step4(step4_job *sj);
 };
 
 #define MAX_STEP4_MOTOR 4
 
 void scan_step4();
-int append_step4(class step4_job *sj) ;
+int append_step4(step4_job *sj) ;
 
 #endif // __STEP4_H__
 

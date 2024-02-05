@@ -59,35 +59,6 @@ void byj::onestep(int dir) {
   }
 }
 
-#if 0
-void byj::onestep(int dir) {
-  const uint16_t EV[] = { 0x1,0x3,0x2,0x6,0x4,0xc,0x8,0x9,0x0 };
-  const int cycle = 8;
-
-  if( dir == 0 ) { // stop
-    for( int k=0,val=0x8; k<4; k++,val >>= 1) {
-      digitalWrite((uint8_t)this->_ports[k], LH(EV[8] & val)); // set LOW to all pin 
-    }
-  } else
-  if( dir > 0 ) {
-    for( int x=0; x<cycle; x++) {
-      for( int k=0,val=0x8; k<4; k++, val >>= 1) {
-        digitalWrite((uint8_t)this->_ports[k], LH(EV[x] & val));
-      }
-      delay(min_delay); // DE
-    
-    }
-  } else {
-    for( int x=cycle-1; x>=0; x--) {
-      for( int k=0,val=0x8; k<4; k++,val >>= 1) {
-        digitalWrite((uint8_t)_ports[k], LH(EV[x] & val));
-      }
-      delay(min_delay); // DE
-    }
-  }
-}
-#endif
-
 void byj::go(int speed, uint16_t distance) { 
   int dir = 1;
   uint32_t de;
@@ -218,7 +189,7 @@ void step4_job::go(int speed, uint16_t distance) {
 
   _speed = abs(speed);
   _distance = distance;
-  _delay = 1000 / (_speed + min_delay);
+  _delay = 10000 / (_speed + min_delay);
   if(_delay < min_delay) _delay = min_delay;
   //_delay = 100;
   _delay_cnt = _delay;
@@ -229,7 +200,21 @@ void step4_job::go(int speed, uint16_t distance) {
 }
 
 void step4_job::info() const {
+  char buf[180];
+  sprintf(buf,"step4info: id(%d) dir(%d) speed(%d) distance=%d delay=%d",_id,_dir,_speed,_distance, _delay);
   Serial.println("step4info:");
+}
+
+void step4_job::stop() { // not pause
+  noInterrupts();
+
+  _dir = 0;
+  _speed = 0;
+  _distance = 0;
+  _delay = _delay_cnt = _mdelay = 0;
+  _step_no = -1;
+
+  interrupts();
 }
 
 step4_job *__step4s[MAX_STEP4_MOTOR] = { 0,0,0,0, };
@@ -243,10 +228,11 @@ void scan_step4() {
   }
 }
 
-int append_step4(class step4_job *sj) {
+int append_step4( step4_job *sj) {
   for(int i=0;i < MAX_STEP4_MOTOR; i++) {
     if( __step4s[i] == (step4_job *)0 ) {
       __step4s[i] = sj;
+      sj->_id = i;
       return i;
     }
   }
