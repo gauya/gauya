@@ -79,6 +79,8 @@ void timer_func() {
       on = !on;
       cnt = 0;
     }
+
+    scan_step4();
 };
 
 void ex_isr() {
@@ -88,9 +90,10 @@ void ex_isr() {
   Serial.print(":");
 }
 
+int interruptPin = 2;
 int motor1_pins[] = { 11,10,9,8,0 };
 byj *B;
-int interruptPin = 2;
+step4_job *SB;
 
 void setup() {
   Serial.begin(115200);
@@ -104,17 +107,20 @@ void setup() {
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(interruptPin), ex_isr, CHANGE);  // RISING,FALLING, HIGH, LOW
 
-  B = (byj*)new byj((int *)motor1_pins);
+  //B = (byj*)new byj((int *)motor1_pins);
+  
+  SB = new step4_job((int *)motor1_pins);
+  int id = append_step4(SB);
 
   char buf[80];
-  sprintf(buf,"szLint = %d, byj=%d, step4_job=%d",sizeof(int),sizeof(class byj),sizeof(step4_job));
+  sprintf(buf,"id = %d, szLint = %d, byj=%d, step4_job=%d",id,sizeof(int),sizeof(class byj),sizeof(step4_job));
   Serial.println(buf);
 
 }
 
 void loop() {
   static int cnt=0;
-  B->test();
+  SB->test();
 
   Serial.println(cnt++);
 }

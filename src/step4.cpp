@@ -88,24 +88,24 @@ void byj::onestep(int dir) {
 }
 #endif
 
-void byj::go(double speed, uint16_t distance) { 
+void byj::go(int speed, uint16_t distance) { 
   int dir = 1;
   uint32_t de;
 
-  if(speed < 0.) {
+  if(abs(speed) < min_speed) {
+    delay(distance * 10);
+    dir = 0;
+    return;
+  }
+  if( speed > min_speed ) {
+    speed = min_speed;
+  } else 
+  if( speed < -min_speed) {
     speed = -speed;
     dir = -1;
   }
-  if( speed > 1. ) speed = 1.0;
 
-  speed = min(speed, 1);
-
-  if( speed < min_speed) {
-    delay(distance * 10);
-    return;
-  }
-
-  de = (uint32_t)(double)(1/(speed));  
+  de = (uint32_t)(1000./(speed));  
   
   while(distance-- > 0) {
     onestep(dir);
@@ -129,9 +129,10 @@ void byj::test() {
     delay(de);
   }
   #else
-  go(0.95,512);
+  go(950,120);
   delay(1000);
-  go(-0.007,51);
+  go(-600,120);
+
   #endif
 }
 
@@ -152,31 +153,46 @@ void step4_job::seq_step() { // called timer interrupt
   noInterrupts(); // inhebit external interrupt
 
   // stoped or nothing to do
-  if( _dir == 0 ) goto seq_stop_return;
+  if( _dir != -1 && _dir != 1 ) {
+    _dir = 0;
+    goto seq_stop_return;
+  }
 
-  // in process
+  if( _mdelay > 0 ) {
+    _mdelay--;
+    goto seq_stop_return;
+  }
   if( _step_no != -1 ) {
     if( _step_no < 0 || _step_no > 7 ) {
+      _step_no = -1;
       goto seq_stop_return; // error
     }
-    mstep(EV[_step_no++]);
-    if( _step_no > 7 ) {
+    mstep(EV[_step_no]);
+    _step_no += _dir;
+    _mdelay = min_delay;
+    if( _step_no > 7 || _step_no < 0 ) {
       // ending mstep
       _step_no = -1;
-
+      _delay_cnt = _delay;
+    } else {
     }
     goto seq_stop_return;
   }
 
-  if( --_delay_cnt > 0 ) {
+  if( _delay_cnt > 0 ) {
+    _delay_cnt--;
     goto seq_stop_return;
   } else {
     // restart step
-    if( --_distance > 0 ) {
+    if( _distance > 0 ) {
       // calc, establish plan
       // delay, delay_cnt
-      _step_no = 0;
+      _distance--;
+      _step_no = (_dir == -1)? 7: 0;
       _delay_cnt = _delay;
+      _mdelay = min_delay;
+    } else {
+      _dir = 0;
     }
   }
 
@@ -184,17 +200,30 @@ seq_stop_return:
   interrupts(); // allow interrupt
 }
 
-void step4_job::go(double speed, uint16_t distance) {
+void step4_job::go(int speed, uint16_t distance) {
+  while( !isstop() ) {
+    delay(1);
+  }
+  
   noInterrupts();
 
-  _dir = (_speed < 0)? -1: (speed < min_speed)? 0 : 1;
+  //_dir = (_speed < -min_speed)? -1: (speed > min_speed)? 1 : 0; // error
+  _dir = (abs(_speed) < min_speed)? 0 : (speed > min_speed)? 1 : -1;
+
+/*
+  char buf[80];
+  sprintf(buf,"speed=%d/%d d=%u dir=%d\n",speed,min_speed, distance,_dir);
+  Serial.println(buf);
+*/
+
   _speed = abs(speed);
   _distance = distance;
-  _delay = 1 / (_speed + min_delay);
+  _delay = 1000 / (_speed + min_delay);
   if(_delay < min_delay) _delay = min_delay;
   //_delay = 100;
   _delay_cnt = _delay;
-  _step_no = 0;
+  _mdelay = 0;
+  _step_no = (_dir == 0)? -1: (_dir == -1)? 7 : 0;
 
   interrupts();
 }
