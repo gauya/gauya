@@ -1,13 +1,13 @@
 #include <Arduino.h>
 #include "step4.h"
 #include "ds3231.h"
+#include "etc.h"
 
 //long time;
 
 #include <TimerOne.h>
 
 void timer_func() {
-    //
     static int on = 1;
     static unsigned long cnt = 0;
     if( cnt++ > 1000 ) {
@@ -54,10 +54,12 @@ void setup() {
 
   ds3231_setup();
 
+/*
   char buf[80];
   sprintf(buf,"id = %d/%d, szLint = %d, byj=%d, step4_job=%d",id1, id2, sizeof(int), sizeof(class byj), sizeof(step4_job));
   Serial.println(buf);
-
+*/
+  _printf("id = %d/%d, szLint = %d, byj=%d, step4_job=%d\n",id1, id2, sizeof(int), sizeof(class byj), sizeof(step4_job));
 }
 
 void loop() {
@@ -68,9 +70,12 @@ void loop() {
   struct tm t;
   read_ds3231(&t);
 
+/*
   char buf[80];
-  sprintf(buf,"cnt=20%x %02x.%02x.%02x %02x:%02x:%02x",cnt++, t.tm_year,t.tm_mon,t.tm_mday,t.tm_hour,t.tm_min,t.tm_sec);
-
+  sprintf(buf,"cnt=%d 20%02x.%02x.%02x %02x:%02x:%02x",cnt++, t.tm_year,t.tm_mon,t.tm_mday,t.tm_hour,t.tm_min,t.tm_sec);
   Serial.println(buf);
+  */
+  _printf("cnt=%d 20%02x.%02x.%02x %02x:%02x:%02x\n",cnt++, t.tm_year,t.tm_mon,t.tm_mday,t.tm_hour,t.tm_min,t.tm_sec);
+
 }
 
