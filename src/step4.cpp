@@ -100,9 +100,9 @@ void byj::test() {
     delay(de);
   }
   #else
-  go(950,120);
+  go(1000,120);
   delay(1000);
-  go(-600,120);
+  go(-40,120);
 
   #endif
 }
@@ -120,7 +120,7 @@ step4_job::~step4_job() {
 }
 
 
-void step4_job::seq_step() { // called timer interrupt
+void step4_job::seq_step2() { // called timer interrupt
   noInterrupts(); // inhebit external interrupt
 
   // stoped or nothing to do
@@ -144,10 +144,10 @@ void step4_job::seq_step() { // called timer interrupt
     if( _step_no > 7 || _step_no < 0 ) {
       // ending mstep
       _step_no = -1;
-      _delay_cnt = _delay;
+      //_delay_cnt = _delay;
     } else {
     }
-    goto seq_stop_return;
+    //goto seq_stop_return;
   }
 
   if( _delay_cnt > 0 ) {
@@ -161,10 +161,48 @@ void step4_job::seq_step() { // called timer interrupt
       _distance--;
       _step_no = (_dir == -1)? 7: 0;
       _delay_cnt = _delay;
-      _mdelay = min_delay;
-    } else {
+    } else { // all processure end
       _dir = 0;
     }
+  }
+
+seq_stop_return:
+  interrupts(); // allow interrupt
+}
+
+// soft step
+void step4_job::seq_step() { // called timer interrupt
+  noInterrupts(); // inhebit external interrupt
+
+  // stoped or nothing to do
+  if( _dir != -1 && _dir != 1 ) {
+    _dir = 0;
+    goto seq_stop_return;
+  }
+
+  if( _delay_cnt > 0 ) {
+    _delay_cnt--;
+  } else {
+  if( _step_no != -1 ) {
+    mstep(EV[_step_no]);
+    _step_no += _dir;
+    _delay_cnt = _delay;
+    if( _step_no > 7 || _step_no < 0 ) {
+      // ending mstep
+      _step_no = -1;
+
+      if( _distance > 0 ) {
+        // calc, establish plan
+        // delay, delay_cnt
+        _distance--;
+        _step_no = (_dir == -1)? 7: 0;
+
+      } else { // all processure end
+        _dir = 0;
+      }
+    }
+  }
+   // restart step
   }
 
 seq_stop_return:
@@ -189,12 +227,17 @@ void step4_job::go(int speed, uint16_t distance) {
 
   _speed = abs(speed);
   _distance = distance;
-  _delay = 10000 / (_speed + min_delay);
+  _delay = 1000/pow((_speed*0.01 + min_delay),2) / 8;
+  //_delay = 10000/(_speed + min_delay);
   if(_delay < min_delay) _delay = min_delay;
   //_delay = 100;
   _delay_cnt = _delay;
   _mdelay = 0;
   _step_no = (_dir == 0)? -1: (_dir == -1)? 7 : 0;
+  
+  char buf[80];
+  sprintf(buf,"delay=%d, step_no=%d, dir=%d speed=%d\n", _delay, _step_no,_dir,_speed);
+  Serial.println(buf);
 
   interrupts();
 }

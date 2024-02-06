@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <arduino.h>
+#include <math.h>
 
 #ifndef __STEP4_H__
 #define __STEP4_H__
@@ -53,6 +54,7 @@ public:
   void stop();
   bool isstop() { return (_dir == 0 ); }
   void seq_step();
+  void seq_step2();
   void go(int speed, uint16_t distance); // timer interrupt will handle
 
   friend int append_step4(step4_job *sj);
