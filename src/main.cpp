@@ -52,7 +52,7 @@ void setup() {
   int id1 = append_step4(SB);
   int id2 = append_step4(SA);
 
-  ds3231_setup();
+  // ds3231_setup();
 
 /*
   char buf[80];
